@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Extended\ACF\Fields;
 
 use Extended\ACF\Key;
+use Extended\ACF\Fields\Transformers\{FieldTransformer, FieldTransformerRegistry};
 use InvalidArgumentException;
 
 abstract class Field
@@ -21,13 +22,16 @@ abstract class Field
     protected array $settings;
     protected string $keyPrefix = 'field';
     protected string|null $type = null;
+    protected FieldTransformer $transformer;
 
-    public function __construct(string $label, string|null $name = null)
+    public function __construct(string $label, string|null $name = null, ?FieldTransformer $transformer = null)
     {
         $this->settings = [
             'label' => $label,
             'name' => $name ?? Key::sanitize($label),
         ];
+
+        $this->transformer = $transformer ?? FieldTransformerRegistry::getTransformer($this->type);
     }
 
     public static function make(string $label, string|null $name = null): static
@@ -75,7 +79,7 @@ abstract class Field
     }
 
     /** @internal */
-    private function cloneRecursively(): static
+    public function cloneRecursively(): static
     {
         $clone = clone $this;
 
@@ -125,38 +129,17 @@ abstract class Field
             $this->settings['type'] = $this->type;
         }
 
-        if (isset($this->settings['conditional_logic'])) {
-            $this->settings['conditional_logic'] = array_map(
-                fn($rules) => $rules->get($parentKey),
-                $this->settings['conditional_logic'],
-            );
-        }
+        $finalSettings = $this->transformer->transform($this->settings, $key, $parentKey);
 
-        if (isset($this->settings['layouts'])) {
-            $this->settings['layouts'] = array_map(
-                fn($layout) => $layout->get($key),
-                $this->settings['layouts'],
-            );
-        }
+        $finalSettings['key'] ??= Key::generate($key, $this->keyPrefix);
 
-        if (isset($this->settings['sub_fields'])) {
-            $this->settings['sub_fields'] = array_map(
-                fn($field) => $field->get($key),
-                $this->settings['sub_fields'],
-            );
-        }
+        return $finalSettings;
+    }
 
-        if (isset($this->settings['collapsed'], $this->settings['sub_fields'])) {
-            foreach ($this->settings['sub_fields'] as $field) {
-                if ($field['name'] === $this->settings['collapsed']) {
-                    $this->settings['collapsed'] = $field['key'];
-                    break;
-                }
-            }
-        }
+    public function setTransformer(FieldTransformer $transformer): self
+    {
+        $this->transformer = $transformer;
 
-        $this->settings['key'] ??= Key::generate($key, $this->keyPrefix);
-
-        return $this->settings;
+        return $this;
     }
 }
