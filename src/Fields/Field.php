@@ -77,8 +77,15 @@ abstract class Field
         dd($this->toArray(), ...$args);
     }
 
-    /** @internal */
-    private function cloneRecursively(): static
+    /**
+     * Deep-clone the field and nested sub-fields.
+     *
+     * Public so consumers can safely duplicate field trees without mutating
+     * the originals (e.g. when composing reusable nested field groups).
+     *
+     * @internal
+     */
+    public function cloneRecursively(): static
     {
         $clone = clone $this;
 
