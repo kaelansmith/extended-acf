@@ -46,6 +46,14 @@ class KeyTest extends TestCase
         $this->assertSame('group_test', Key::sanitize('GROUP-TEST'));
     }
 
+    public function testSanitizeAsciiIdentifiers()
+    {
+        $this->assertSame('field_name_123', Key::sanitize('FIELD_Name_123'));
+        $this->assertSame('_leading_', Key::sanitize('_LEADING_'));
+        $this->assertSame('0', Key::sanitize('0'));
+        $this->assertSame(str_repeat('a', 200), Key::sanitize(str_repeat('A', 200)));
+    }
+
     public function testHash()
     {
         $this->assertSame('b35135fa', Key::hash('image'));

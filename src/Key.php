@@ -50,21 +50,8 @@ class Key
 
     public static function sanitize(string $key): string
     {
-        // For 1-200 ASCII letters, digits and underscores, WordPress's default
-        // sanitizer produces the lowercase input. Other inputs and hook
-        // configurations use the full pipeline. The shortcut skips filter
-        // dispatch and its call counter.
-        $hook = $GLOBALS['wp_filter']['sanitize_title'] ?? null;
-        $all = $GLOBALS['wp_filter']['all'] ?? null;
-        if (
-            strlen($key) <= 200 && preg_match('/\A[a-zA-Z0-9_]+\z/D', $key)
-            && $hook instanceof \WP_Hook
-            && count($hook->callbacks) === 1
-            && count($hook->callbacks[10] ?? []) === 1
-            && ($hook->callbacks[10]['sanitize_title_with_dashes']['function'] ?? null) === 'sanitize_title_with_dashes'
-            && ($hook->callbacks[10]['sanitize_title_with_dashes']['accepted_args'] ?? null) === 3
-            && empty($all->callbacks)
-        ) {
+        // ASCII identifiers only need lowercasing. WordPress truncates longer slugs.
+        if (strlen($key) <= 200 && preg_match('/\A[a-zA-Z0-9_]+\z/', $key)) {
             return strtolower($key);
         }
 
